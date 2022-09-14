@@ -55,10 +55,15 @@ class Post(models.Model):
     group = models.ForeignKey(
         Group,
         on_delete=models.SET_NULL,
-        related_name="posts",
+        related_name='posts',
         blank=True,
         null=True,
         verbose_name='Группа',
+    )
+    image = models.ImageField(
+        'Картинка',
+        upload_to='posts/',
+        blank=True
     )
 
     def __str__(self):
@@ -66,3 +71,35 @@ class Post(models.Model):
 
     class Meta:
         ordering = '-pub_date',
+
+
+class Comment(models.Model):
+    """Description."""
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comments',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+    )
+    text = models.TextField()
+    created = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+
+class Follow(models.Model):
+    """Description."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='folower',
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='following',
+    )

@@ -18,6 +18,17 @@
     {% endif %}
   </h1>
   <h3>Всего постов: {{ author.posts.count }}</h3>
+  {% if following %}
+    <a class="btn btn-lg btn-light mb-5 mt-2"
+    href="{% url 'posts:profile_unfollow' author.username %}" role="button">
+      Отписаться
+    </a>
+  {% else %}
+    <a class="btn btn-lg btn-primary mb-5 mt-2"
+    href="{% url 'posts:profile_follow' author.username %}" role="button">
+      Подписаться
+    </a>
+  {% endif %}
   {% for post in page_obj %}
   {% include 'posts/includes/post.html' %}
   {% if not forloop.last %}<hr>

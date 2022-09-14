@@ -1,12 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import cache_page
 
-from posts.forms import PostForm
+from posts.forms import PostForm, CommentForm
 from posts.utils import page_nav
 
-from .models import Group, Post, User
+from .models import Group, Post, User, Follow
 
 
+@cache_page(20, key_prefix='index_page')
 def index(request):
     """
     Функция обрабатывает запросы к главной странице,
@@ -59,9 +61,13 @@ def post_detail(request, post_id):
     """
     Функция обрабатывает запросы к странице поста.
     """
-    post = get_object_or_404(Post, pk=post_id)
+    post = Post.objects.select_related('group', 'author').get(id=post_id)
+    form = CommentForm()
+    comments = post.comments.all()
     context = {
         'post': post,
+        'form': form,
+        'comments': comments,
     }
 
     return render(request, 'posts/post_detail.html', context)
@@ -74,7 +80,10 @@ def post_create(request):
     После успешной валидации формы добавляется пост, а автор
     перенаправляется на страницу профиля.
     """
-    form = PostForm(request.POST or None)
+    form = PostForm(
+        request.POST or None,
+        files=request.FILES or None,
+    )
     if request.method == 'POST' and form.is_valid():
         post = form.save(commit=False)
         post.author = request.user
@@ -101,6 +110,14 @@ def post_edit(request, post_id):
     is_edit = True
     if post.author != request.user:
         return redirect('posts:post_detail', post_id)
+    form = PostForm(
+        request.POST or None,
+        files=request.FILES or None,
+        instance=post,
+    )
+    is_edit = True
+    if post.author != request.user:
+        return redirect('posts:post_detail', post_id)
 
     form = PostForm(request.POST or None, instance=post)
     if request.method == 'POST' and form.is_valid():
@@ -119,3 +136,52 @@ def post_edit(request, post_id):
             'is_edit': is_edit,
         }
     )
+
+
+@login_required
+def add_comment(request, post_id):
+    """
+    Description.
+    """
+    post = get_object_or_404(Post, id=post_id)
+    form = CommentForm(request.POST or None)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
+    return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def follow_index(request):
+    """
+    Description.
+    """
+    post_list = Post.objects.filter(author__following__user=request.user)
+    page_obj = page_nav(request, post_list)
+    context = {
+        'page_obj': page_obj,
+    }
+    return render(request, 'posts/follow.html', context)
+
+
+@login_required
+def profile_follow(request, username):
+    """
+    Description.
+    """
+    author = get_object_or_404(User, username=username)
+    if author != request.user:
+        Follow.objects.get_or_create(user=request.user, author=author)
+    return redirect('posts:follow_index')
+
+
+@login_required
+def profile_unfollow(request, username):
+    """
+    Description.
+    """
+    author = get_object_or_404(User, username=username)
+    Follow.objects.filter(user=request.user, author=author).delete()
+    return redirect('posts:follow_index')
