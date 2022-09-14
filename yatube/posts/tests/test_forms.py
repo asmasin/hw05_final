@@ -47,7 +47,6 @@ class PostFormTests(TestCase):
             'text': 'new test post',
             'author': self.post.author,
             'group': self.group.id,
-            
         }
         response = self.author_client.post(
             reverse('posts:post_create'),
