@@ -63,7 +63,7 @@ class Post(models.Model):
     image = models.ImageField(
         'Картинка',
         upload_to='posts/',
-        blank=True
+        blank=True,
     )
 
     def __str__(self):
@@ -96,7 +96,7 @@ class Follow(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='folower',
+        related_name='follower',
     )
     author = models.ForeignKey(
         User,

@@ -107,6 +107,11 @@ class StaticPagesURLTests(TestCase):
                 self.client,
                 'posts/post_detail.html'
             ),
+            (
+                '/nonexist-page/',
+                self.client,
+                'core/404.html',
+            ),
         )
 
         for address, client, template in templates:

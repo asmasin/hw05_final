@@ -1,11 +1,20 @@
+import shutil
+import tempfile
+
 from django import forms
-from django.test import Client, TestCase
+from django.conf import settings
+from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post, User
 from ..constants import POST_COUNT, TEST_POST_COUNT
+from ..models import Comment, Follow, Group, Post, User
+
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostPagesTests(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -23,11 +32,20 @@ class PostPagesTests(TestCase):
             text='test post',
         )
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(
+            TEMP_MEDIA_ROOT,
+            ignore_errors=True,
+        )
+
     def setUp(self):
         self.user_client = Client()
         self.user_client.force_login(self.user)
         self.author_client = Client()
         self.author_client.force_login(self.author)
+        cache.clear()
 
     def test_views_uses_correct_template(self):
         """Функция тестирует соответствие шаблонов для view-функций."""
@@ -221,6 +239,7 @@ class PostPagesTests(TestCase):
 
     def test_paginator(self):
         """Тестирование паджинатора."""
+        Post.objects.all().delete()
         test_posts = [
             Post(
                 text=f'test paginator text {i}',
@@ -236,11 +255,232 @@ class PostPagesTests(TestCase):
         )
 
         for pages in paginator_pages:
-            response = self.client.get(pages)
-            page_context = response.context['page_obj'].object_list
+            page1_context = self.client.get(
+                pages,
+            ).context['page_obj'].object_list
             with self.subTest():
-                self.assertEqual(len(page_context), POST_COUNT)
-                p_2 = self.client.get((pages) + '?page=2')
-                if response == p_2.context['page_obj'].object_list:
-                    self.assertEqual(len(page_context),
-                                     TEST_POST_COUNT - POST_COUNT)
+                self.assertEqual(len(page1_context), POST_COUNT)
+            page2_context = self.client.get(
+                (pages) + '?page=2'
+            ).context['page_obj'].object_list
+            with self.subTest():
+                self.assertEqual(
+                    len(page2_context),
+                    TEST_POST_COUNT - POST_COUNT
+                )
+
+    def test_post_with_image(self):
+        """"""
+        pic = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
+                     b'\x01\x00\x80\x00\x00\x00\x00\x00'
+                     b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+                     b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+                     b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+                     b'\x0A\x00\x3B')
+        upload = SimpleUploadedFile(
+            name='pic.jpg',
+            content=pic,
+            content_type='image/jpg',
+        )
+        post_with_pic = Post.objects.create(
+            author=self.author,
+            group=self.group,
+            text='test post',
+            image=upload,
+        )
+        response = self.client.get(
+            reverse(
+                'posts:post_detail',
+                kwargs={
+                    'post_id': post_with_pic.id,
+                }
+            )
+        )
+        post_context = response.context['post']
+        self.assertEqual(post_context, post_with_pic)
+        urls = {
+            'posts:index': {},
+            'posts:group_list': {
+                'slug': post_with_pic.group.slug,
+            },
+            'posts:profile': {
+                'username': (post_with_pic.author.username)
+            }
+        }
+        for url, kwargs in urls.items():
+            with self.subTest():
+                response = self.client.get(
+                    reverse(
+                        url,
+                        kwargs=kwargs,
+                    )
+                )
+                page_obj_context = response.context['page_obj'].object_list
+                self.assertIn(post_with_pic, page_obj_context)
+
+    def test_cache(self):
+        """"""
+        test_post = Post.objects.create(
+            author=self.author,
+            group=self.group,
+            text='test post cache',
+        )
+        new_post = self.client.get(
+            reverse(
+                'posts:index',
+            )
+        ).content
+        test_post.delete()
+        new_post_deleted = self.client.get(
+            reverse(
+                'posts:index',
+            )
+        ).content
+        cache.clear()
+        clear_cache = self.client.get(
+            reverse(
+                'posts:index'
+            )
+        ).content
+        self.assertEqual(new_post, new_post_deleted)
+        self.assertNotEqual(new_post, clear_cache)
+
+    def test_authorized_user_post_comment(self):
+        """"""
+        comments_before_create = list(
+            Comment.objects.values_list(
+                'id',
+                flat=True,
+            )
+        )
+        comment = 'test comment'
+        self.user_client.post(
+            reverse(
+                'posts:add_comment',
+                kwargs={
+                    'post_id': self.post.id,
+                },
+            ),
+            data={
+                'text': comment,
+            },
+            follow=True,
+        )
+        comments_after_create = Comment.objects.all().exclude(
+            id__in=comments_before_create
+        ).count()
+        self.assertEqual(comments_after_create, self.post.comments.count())
+        self.assertTrue(self.post.comments.filter(text=comment).exists())
+
+    def test_guest_user_post_comment(self):
+        """"""
+        comment = 'test comment'
+        comments_count_before = self.post.comments.count()
+        self.client.post(
+            reverse(
+                'posts:add_comment',
+                kwargs={
+                    'post_id': self.post.id,
+                },
+            ),
+            data={
+                'text': comment,
+            },
+            follow=True,
+        )
+        self.assertEqual(comments_count_before, self.post.comments.count())
+        self.assertFalse(self.post.comments.filter(text=comment).exists())
+
+    def test_comment_correct_context(self):
+        """"""
+        comment = 'test comment'
+        self.user_client.post(
+            reverse(
+                'posts:add_comment',
+                kwargs={
+                    'post_id': self.post.id,
+                }
+            ),
+            data={
+                'text': comment,
+            },
+            follow=True,
+        )
+        response = self.user_client.get(
+            reverse(
+                'posts:post_detail',
+                kwargs={
+                    'post_id': self.post.id,
+                }
+            )
+        )
+        comment = response.context['comments'].filter(text=comment)
+        self.assertTrue(comment.exists())
+
+    def test_subscribe(self):
+        """"""
+        self.user_client.post(
+            reverse(
+                'posts:profile_follow',
+                kwargs={
+                    'username': self.author.username,
+                }
+            )
+        )
+        self.assertTrue(Follow.objects.filter(
+            user=self.user,
+            author=self.author,
+        ).exists()
+        )
+
+    def test_unsubscribe(self):
+        """"""
+        Follow.objects.create(
+            user=self.user,
+            author=self.author,
+        )
+        self.user_client.post(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={
+                    'username': self.author.username
+                }
+            )
+        )
+        self.assertFalse(Follow.objects.filter(
+            user=self.user,
+            author=self.author,
+        ).exists()
+        )
+
+    def test_new_posts_in_subscribers_(self):
+        """"""
+        Follow.objects.create(
+            user=self.user,
+            author=self.author,
+        )
+        new_post = Post.objects.create(
+            author=self.author,
+            text='test post',
+        )
+        response = self.user_client.get(
+            reverse(
+                'posts:follow_index',
+            )
+        )
+        page_obj_context = response.context['page_obj'].object_list
+        self.assertIn(new_post, page_obj_context)
+
+    def test_no_new_posts_in_not_subscribers_feed(self):
+        """"""
+        new_post = Post.objects.create(
+            author=self.author,
+            text='test post',
+        )
+        response = self.user_client.get(
+            reverse(
+                'posts:follow_index',
+            )
+        )
+        page_obj_context = response.context['page_obj'].object_list
+        self.assertNotIn(new_post, page_obj_context)

@@ -21,9 +21,9 @@
         </li>
         <li class="list-group-item d-flex justify-content-between align-items-center">
           {% if post.group %}
-            <a href="{% url 'posts:group_list' post.group.slug %}">все записи группы</a>
+            <a class="btn btn-primary" href="{% url 'posts:group_list' post.group.slug %}" role="button">Все записи группы</a>
           {% endif %}
-          <a href="{% url 'posts:profile' post.author.username %}">все записи пользователя</a>
+          <a class="btn btn-primary" href="{% url 'posts:profile' post.author.username %}" role="button">Все записи пользователя</a>
         </li>
       </ul>
     </aside>
@@ -33,7 +33,7 @@
       {% endthumbnail %}
       <p>{{ post.text|linebreaksbr }}</p>
       {% if post.author == request.user %}
-      <a href="{% url 'posts:post_edit' post.id %}">редактировать</a>
+      <a class="btn btn-primary" href="{% url 'posts:post_edit' post.id %}" role="button">Редактировать</a>
       {% endif %}
     </article>
     {% if user.is_authenticated %}

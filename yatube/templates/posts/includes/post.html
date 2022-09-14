@@ -16,9 +16,9 @@
     <img class="card-img my-2" src="{{ im.url }}">
     {% endthumbnail %}
     <p>{{ post.text|truncatechars:500|linebreaksbr }}</p>
-    <a href="{% url 'posts:post_detail' post.id %}">подробнее</a><br>
+    <a class="btn btn-primary" href="{% url 'posts:post_detail' post.id %}" role="button">подробнее</a>
     {% if not group and post.group %}
-    <a href="{% url 'posts:group_list' post.group.slug %}">все записи группы</a>
+    <a class="btn btn-primary" href="{% url 'posts:group_list' post.group.slug %}" role="button">все записи группы</a>
     {% endif %}
   </article>
 </div>
