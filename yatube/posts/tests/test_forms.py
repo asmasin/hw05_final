@@ -96,9 +96,8 @@ class PostFormTests(TestCase):
         )
 
     def test_create_post_with_img(self):
-        """
-        Description.
-        """
+        """Функция тестирует изменение поста с картинкой в базе данных
+        при отправке валидной формы со страницы добавления поста."""
         posts_count = Post.objects.count()
         pic = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'

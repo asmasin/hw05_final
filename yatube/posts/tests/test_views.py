@@ -269,7 +269,8 @@ class PostPagesTests(TestCase):
                 )
 
     def test_post_with_image(self):
-        """Description."""
+        """Функция тестирует отображение поста с картинкой на
+        главной страницы, странице группы, странице поста."""
         pic = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
             b'\x01\x00\x80\x00\x00\x00\x00\x00'
@@ -317,7 +318,7 @@ class PostPagesTests(TestCase):
                 self.assertIn(post_with_pic, page_obj_context)
 
     def test_cache(self):
-        """"""
+        """Функция тестирует работу кеша на главной странице."""
         test_post = Post.objects.create(
             author=self.author,
             group=self.group,
@@ -344,7 +345,8 @@ class PostPagesTests(TestCase):
         self.assertNotEqual(new_post, clear_cache)
 
     def test_authorized_user_post_comment(self):
-        """"""
+        """Функция тестирует возможность отправки
+        комментариев авторизованными пользователями."""
         comments_before_create = list(
             Comment.objects.values_list(
                 'id',
@@ -370,8 +372,9 @@ class PostPagesTests(TestCase):
         self.assertEqual(comments_after_create, self.post.comments.count())
         self.assertTrue(self.post.comments.filter(text=comment).exists())
 
-    def test_guest_user_post_comment(self):
-        """"""
+    def test_guest_user_cant_post_comment(self):
+        """Функция тестирует возможность
+        отправки комментариев гостями."""
         comment = 'test comment'
         comments_count_before = self.post.comments.count()
         self.client.post(
@@ -390,7 +393,8 @@ class PostPagesTests(TestCase):
         self.assertFalse(self.post.comments.filter(text=comment).exists())
 
     def test_comment_correct_context(self):
-        """"""
+        """Функция тестирует контекст функции отправки
+        комментариев, передаваемый на страницу поста."""
         comment = 'test comment'
         self.user_client.post(
             reverse(
@@ -416,7 +420,7 @@ class PostPagesTests(TestCase):
         self.assertTrue(comment.exists())
 
     def test_subscribe(self):
-        """"""
+        """Функция тестирует возмозжность подписки на."""
         self.user_client.post(
             reverse(
                 'posts:profile_follow',
@@ -432,7 +436,7 @@ class PostPagesTests(TestCase):
         )
 
     def test_unsubscribe(self):
-        """"""
+        """Функция тестирует возможность отписки от авторов."""
         Follow.objects.create(
             user=self.user,
             author=self.author,
@@ -452,7 +456,8 @@ class PostPagesTests(TestCase):
         )
 
     def test_new_posts_in_subscribers_(self):
-        """"""
+        """Функция тестирует отображение постов
+        авторов на которых подписан пользователь."""
         Follow.objects.create(
             user=self.user,
             author=self.author,
@@ -470,7 +475,8 @@ class PostPagesTests(TestCase):
         self.assertIn(new_post, page_obj_context)
 
     def test_no_new_posts_in_not_subscribers_feed(self):
-        """"""
+        """Функция тестирует отсутствие постов
+        авторов на которых не подписан пользователь."""
         new_post = Post.objects.create(
             author=self.author,
             text='test post',
