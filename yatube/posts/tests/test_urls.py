@@ -22,15 +22,16 @@ class StaticPagesURLTests(TestCase):
         )
 
     def setUp(self):
-        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(StaticPagesURLTests.user)
         self.author_client = Client()
         self.author_client.force_login(StaticPagesURLTests.author)
 
     def test_urls(self):
-        """Фунцкция тестирует доступность страниц
-        с учетом прав доступа пользователя."""
+        """
+        Фунцкция тестирует доступность страниц
+        с учетом прав доступа пользователя.
+        """
         urls = (
             (
                 '/',
@@ -75,7 +76,9 @@ class StaticPagesURLTests(TestCase):
                 self.assertEqual(response.status_code, status)
 
     def test_tmpls(self):
-        """Функция тестирует соответствие шаблонов страниц."""
+        """
+        Функция тестирует соответствие шаблонов страниц.
+        """
         templates = (
             (
                 '/',
@@ -120,8 +123,10 @@ class StaticPagesURLTests(TestCase):
                 self.assertTemplateUsed(response, template)
 
     def test_redirects(self):
-        """Функция тестирует редиректы со страниц создания
-        и редактирования поста, с учетом прав пользователя."""
+        """
+        Функция тестирует редиректы со страниц создания
+        и редактирования поста, с учетом прав пользователя.
+        """
         redirects = (
             (
                 '/create/',

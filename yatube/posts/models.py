@@ -74,7 +74,13 @@ class Post(models.Model):
 
 
 class Comment(models.Model):
-    """Description."""
+    """
+    Модель, описывающая поля БД для "Комментариев пользователей":
+    text        - Текст комментария,
+    post        - Ссылка на пост,
+    author      - Ссылка на автора поста,
+    created     - Дата комментария.
+    """
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
@@ -92,7 +98,11 @@ class Comment(models.Model):
 
 
 class Follow(models.Model):
-    """Description."""
+    """
+    Модель, описывающая поля БД для "Подписок на авторов":
+    user        - Ссылка на пользователя,
+    author      - Ссылка на автора, на которого подписан пользователь.
+    """
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

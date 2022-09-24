@@ -20,9 +20,20 @@ class PostModelTest(TestCase):
         )
 
     def test_models_have_correct_object_names(self):
-        """Функция тестирует правильное отображение
-        значение поля __str__ в объекте модели."""
-        expected_group_name = self.group.title
-        expected_post_text = self.post.text[:TEST_TEXT_COUNT]
-        self.assertEqual(expected_group_name, str(self.group))
-        self.assertEqual(expected_post_text, str(self.post))
+        """
+        Функция тестирует правильное отображение
+        значение поля __str__ в объекте модели.
+        """
+        expected_values = (
+            (
+                self.group.title,
+                str(self.group)
+            ),
+            (
+                self.post.text[:TEST_TEXT_COUNT],
+                str(self.post)
+            ),
+        )
+        for expected_value, received_value in expected_values:
+            with self.subTest():
+                self.assertEqual(expected_value, received_value)

@@ -46,10 +46,17 @@ def profile(request, username):
     получает посты пользователя, собирает словарь и рендерит шаблон.
     """
     author = get_object_or_404(User, username=username)
-    post_list = author.posts.select_related('author')
+    post_list = author.posts.select_related('group')
+    following = False
+    if request.user.is_authenticated:
+        following = Follow.objects.filter(
+            user=request.user,
+            author=author,
+        ).exists()
     page_obj = page_nav(request, post_list)
     context = {
         'author': author,
+        'following': following,
         'page_obj': page_obj,
     }
 
@@ -109,14 +116,6 @@ def post_edit(request, post_id):
     is_edit = True
     if post.author != request.user:
         return redirect('posts:post_detail', post_id)
-    form = PostForm(
-        request.POST or None,
-        files=request.FILES or None,
-        instance=post,
-    )
-    is_edit = True
-    if post.author != request.user:
-        return redirect('posts:post_detail', post_id)
 
     form = PostForm(request.POST or None, instance=post)
     if request.method == 'POST' and form.is_valid():
@@ -140,7 +139,9 @@ def post_edit(request, post_id):
 @login_required
 def add_comment(request, post_id):
     """
-    Description.
+    Функция обрабатывает запросы к форме добавления комментария.
+    После успешной валидации формы добавляется комментарий на
+    странице поста.
     """
     post = get_object_or_404(Post, id=post_id)
     form = CommentForm(request.POST or None)
@@ -149,13 +150,14 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
+
     return redirect('posts:post_detail', post_id=post_id)
 
 
 @login_required
 def follow_index(request):
     """
-    Description.
+    Функция обрабатывает запросы к странице подписок пользователя.
     """
     post_list = Post.objects.filter(author__following__user=request.user)
     page_obj = page_nav(request, post_list)
@@ -168,7 +170,7 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     """
-    Description.
+    Функция подписки на авторов.
     """
     author = get_object_or_404(User, username=username)
     if author != request.user:
@@ -179,7 +181,7 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     """
-    Description.
+    Функция отписки от авторов.
     """
     author = get_object_or_404(User, username=username)
     Follow.objects.filter(user=request.user, author=author).delete()
