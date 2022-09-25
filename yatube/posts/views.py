@@ -164,6 +164,7 @@ def follow_index(request):
     context = {
         'page_obj': page_obj,
     }
+
     return render(request, 'posts/follow.html', context)
 
 
@@ -175,6 +176,7 @@ def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     if author != request.user:
         Follow.objects.get_or_create(user=request.user, author=author)
+
     return redirect('posts:follow_index')
 
 
@@ -185,4 +187,5 @@ def profile_unfollow(request, username):
     """
     author = get_object_or_404(User, username=username)
     Follow.objects.filter(user=request.user, author=author).delete()
+
     return redirect('posts:follow_index')
