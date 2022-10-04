@@ -17,9 +17,15 @@
     {{ author.username }}
     {% endif %}
   </h1>
-  <h3>Всего постов: {{ author.posts.count }}</h3>
-  <h3>Всего подписок: {{ author.follower.count }}</h3>
-  <h3>Всего подписчиков: {{ author.following.count }}</h3>
+  <div class="row mb-5">
+    <div class="col-8 col-md-4">
+      <h3>Всего постов: {{ author.posts.count }}</h3>
+    </div>
+    <div class="col-8 col-md-4">
+      <h3>Всего подписок: {{ author.follower.count }}</h3>
+      <h3>Всего подписчиков: {{ author.following.count }}</h3>
+    </div>
+  </div>
   {% if request.user != user %} 
   {% if following %}
   <a class="btn btn-lg btn-light mb-5 mt-2"
